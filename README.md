@@ -13,6 +13,14 @@ A full-stack web application that uses AI to analyze email subject lines and pro
 - **Responsive Design**: Works on desktop and mobile devices
 - **Real-time Analysis**: Fast AI-powered feedback
 
+## 📸 Screenshots
+
+### Main Interface
+![Email Subject Line Analyzer Interface](screenshots/image.png)
+
+### Analysis Results
+![Analysis Results with Score and Suggestions](screenshots/image-2.png)
+
 ## 🏗️ Project Structure
 
 ```
@@ -248,20 +256,6 @@ The application provides detailed scoring across four key metrics:
 
 This project is licensed under the ISC License.
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## 📞 Support
-
-For issues and questions:
-1. Check the troubleshooting section
-2. Review the API documentation
-3. Create an issue in the repository
 
 ---
 
