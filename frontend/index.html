@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Email Subject Line Analyzer</title>
+  </head>
+  <body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+      <!-- Header -->
+      <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">
+          Email Subject Line Analyzer
+        </h1>
+        <p class="text-gray-600">
+          Get effective insights for your email subject lines
+        </p>
+      </div>
+
+      <!-- Main Form -->
+      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <form id="analyzeForm" class="space-y-6">
+          <!-- Subject Line Input -->
+          <div>
+            <label
+              for="subjectLine"
+              class="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Subject Line
+            </label>
+            <input
+              type="text"
+              id="subjectLine"
+              name="subjectLine"
+              placeholder="Enter your email subject line here..."
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+            />
+          </div>
+
+          <!-- Industry Dropdown -->
+          <div>
+            <label
+              for="industry"
+              class="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Industry
+            </label>
+            <select
+              id="industry"
+              name="industry"
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+            >
+              <option value="">Select an industry</option>
+              <option value="e-commerce">E-commerce</option>
+              <option value="saas">SaaS</option>
+              <option value="retail">Retail</option>
+            </select>
+          </div>
+
+          <!-- Submit Button -->
+          <div class="text-center">
+            <button
+              type="submit"
+              class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-8 rounded-lg transition duration-200 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              Analyze Subject Line
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Results Section -->
+      <div id="results" class="hidden">
+        <!-- Score Display -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 class="text-xl font-semibold text-gray-900 mb-4">
+            Analysis Score
+          </h2>
+          <div class="flex items-center space-x-4">
+            <div class="text-4xl font-bold text-blue-600" id="score">0</div>
+            <div class="text-gray-600">
+              <div class="text-sm">out of 100</div>
+              <div class="text-xs text-gray-500" id="scoreDescription">
+                Score description
+              </div>
+            </div>
+          </div>
+          <div class="mt-4">
+            <div class="w-full bg-gray-200 rounded-full h-3">
+              <div
+                id="scoreBar"
+                class="bg-blue-600 h-3 rounded-full transition-all duration-500"
+                style="width: 0%"
+              ></div>
+            </div>
+          </div>
+          <!-- Score Explanation -->
+          <div id="scoreExplanation" class="mt-4 p-4 bg-gray-50 rounded-lg">
+            <h3 class="font-semibold text-gray-900 mb-2">Score Breakdown</h3>
+            <div id="scoreBreakdown" class="text-sm text-gray-700">
+              <!-- Score breakdown will be populated here -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Issues Section -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 class="text-xl font-semibold text-gray-900 mb-4">Issues Found</h2>
+          <div id="issuesList" class="space-y-2">
+            <!-- Issues will be populated here -->
+          </div>
+        </div>
+
+        <!-- AI Suggestions Section -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <h2 class="text-xl font-semibold text-gray-900 mb-4">
+            AI Suggestions
+          </h2>
+          <div id="suggestionsList" class="space-y-3">
+            <!-- Suggestions will be populated here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div id="loading" class="hidden text-center py-8">
+        <div
+          class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"
+        ></div>
+        <p class="mt-2 text-gray-600">Analyzing your subject line...</p>
+      </div>
+    </div>
+
+    <script>
+      document
+        .getElementById("analyzeForm")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+
+          const subjectLine = document.getElementById("subjectLine").value;
+          const industry = document.getElementById("industry").value;
+
+          if (!subjectLine || !industry) {
+            alert("Please fill in all fields");
+            return;
+          }
+
+          // Show loading state
+          document.getElementById("loading").classList.remove("hidden");
+          document.getElementById("results").classList.add("hidden");
+
+          try {
+            // Call the actual API endpoint
+            const response = await fetch(
+              "http://localhost:3001/api/analyze-subject",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  subject: subjectLine,
+                  industry: industry,
+                }),
+              }
+            );
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(
+                errorData.error || `HTTP error! status: ${response.status}`
+              );
+            }
+
+            const analysisData = await response.json();
+            displayResults(analysisData);
+          } catch (error) {
+            console.error("Error analyzing subject line:", error);
+            displayError(error.message);
+          } finally {
+            // Hide loading state
+            document.getElementById("loading").classList.add("hidden");
+          }
+        });
+
+      function displayResults(data) {
+        // Update score
+        const score = data.score;
+        document.getElementById("score").textContent = score;
+        document.getElementById("scoreBar").style.width = score + "%";
+
+        // Update score description with more detailed explanations
+        let description = "";
+        let scoreColor = "";
+        if (score >= 90) {
+          description =
+            "Excellent subject line! This will likely perform very well.";
+          scoreColor = "text-green-600";
+        } else if (score >= 80) {
+          description = "Good subject line with room for improvement.";
+          scoreColor = "text-blue-600";
+        } else if (score >= 70) {
+          description =
+            "Average subject line, needs optimization to improve performance.";
+          scoreColor = "text-yellow-600";
+        } else if (score >= 50) {
+          description =
+            "Below average subject line, significant improvements needed.";
+          scoreColor = "text-orange-600";
+        } else {
+          description = "Poor subject line, requires major improvements.";
+          scoreColor = "text-red-600";
+        }
+
+        document.getElementById("scoreDescription").textContent = description;
+        document.getElementById(
+          "scoreDescription"
+        ).className = `text-xs ${scoreColor}`;
+
+        // Update score breakdown
+        updateScoreBreakdown(score);
+
+        // Update issues - fix the logic
+        const issuesList = document.getElementById("issuesList");
+        issuesList.innerHTML = "";
+
+        if (data.issues && data.issues.length > 0) {
+          data.issues.forEach((issue) => {
+            const issueDiv = document.createElement("div");
+            issueDiv.className = "flex items-start space-x-2 text-red-600";
+            issueDiv.innerHTML = `
+                        <svg class="w-5 h-5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span>${issue}</span>
+                    `;
+            issuesList.appendChild(issueDiv);
+          });
+        } else if (score >= 80) {
+          // Only show "no issues" if score is actually good
+          issuesList.innerHTML =
+            '<div class="text-green-600 flex items-center space-x-2"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg><span>No major issues found! Great subject line.</span></div>';
+        } else {
+          // If score is low but no specific issues, show a general message
+          issuesList.innerHTML =
+            '<div class="text-orange-600">While no specific issues were identified, the overall score suggests room for improvement.</div>';
+        }
+
+        // Update suggestions - always show if score is low or if suggestions exist
+        const suggestionsList = document.getElementById("suggestionsList");
+        suggestionsList.innerHTML = "";
+
+        if (data.suggestions && data.suggestions.length > 0) {
+          data.suggestions.forEach((suggestion, index) => {
+            const suggestionDiv = document.createElement("div");
+            suggestionDiv.className =
+              "flex items-start space-x-2 text-green-600 p-3 bg-green-50 rounded-lg border border-green-200";
+            suggestionDiv.innerHTML = `
+                        <svg class="w-5 h-5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                        </svg>
+                        <div class="flex-1">
+                            <span class="block mb-2">${suggestion}</span>
+                            <button 
+                                onclick="copySuggestion('${suggestion.replace(
+                                  /'/g,
+                                  "\\'"
+                                )}', this, ${index})"
+                                class="inline-flex items-center space-x-1 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-md transition duration-200 focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
+                            >
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                </svg>
+                                <span class="copy-text">Copy</span>
+                            </button>
+                        </div>
+                    `;
+            suggestionsList.appendChild(suggestionDiv);
+          });
+        } else if (score < 80) {
+          // If no suggestions but score is low, show general improvement tips
+          const generalTips = [
+            "Consider making the subject line more compelling and action-oriented",
+            "Try adding urgency or scarcity elements",
+            "Test different emotional triggers relevant to your audience",
+            "Keep it concise and mobile-friendly (under 50 characters)",
+          ];
+
+          generalTips.forEach((tip, index) => {
+            const suggestionDiv = document.createElement("div");
+            suggestionDiv.className =
+              "flex items-start space-x-2 text-green-600 p-3 bg-green-50 rounded-lg border border-green-200";
+            suggestionDiv.innerHTML = `
+                        <svg class="w-5 h-5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                        </svg>
+                        <div class="flex-1">
+                            <span class="block mb-2">${tip}</span>
+                            <button 
+                                onclick="copySuggestion('${tip.replace(
+                                  /'/g,
+                                  "\\'"
+                                )}', this, ${index})"
+                                class="inline-flex items-center space-x-1 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-md transition duration-200 focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
+                            >
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                </svg>
+                                <span class="copy-text">Copy</span>
+                            </button>
+                        </div>
+                    `;
+            suggestionsList.appendChild(suggestionDiv);
+          });
+        }
+
+        // Show AI insights if available
+        if (data.ai_insights) {
+          const insightsDiv = document.createElement("div");
+          insightsDiv.className = "mt-4 p-4 bg-blue-50 rounded-lg";
+          insightsDiv.innerHTML = `
+                    <h3 class="font-semibold text-blue-900 mb-2">AI Insights</h3>
+                    <p class="text-blue-800">${data.ai_insights}</p>
+                `;
+          suggestionsList.appendChild(insightsDiv);
+        }
+
+        // Show results
+        document.getElementById("results").classList.remove("hidden");
+      }
+
+      function updateScoreBreakdown(score) {
+        const breakdown = document.getElementById("scoreBreakdown");
+        let breakdownText = "";
+
+        if (score >= 90) {
+          breakdownText = `
+                    <div class="space-y-2">
+                        <div class="flex justify-between"><span>Clarity & Readability:</span><span class="font-semibold text-green-600">Excellent</span></div>
+                        <div class="flex justify-between"><span>Engagement Factor:</span><span class="font-semibold text-green-600">High</span></div>
+                        <div class="flex justify-between"><span>Industry Relevance:</span><span class="font-semibold text-green-600">Perfect</span></div>
+                        <div class="flex justify-between"><span>Mobile Optimization:</span><span class="font-semibold text-green-600">Optimal</span></div>
+                    </div>
+                `;
+        } else if (score >= 80) {
+          breakdownText = `
+                    <div class="space-y-2">
+                        <div class="flex justify-between"><span>Clarity & Readability:</span><span class="font-semibold text-blue-600">Good</span></div>
+                        <div class="flex justify-between"><span>Engagement Factor:</span><span class="font-semibold text-blue-600">Moderate</span></div>
+                        <div class="flex justify-between"><span>Industry Relevance:</span><span class="font-semibold text-blue-600">Good</span></div>
+                        <div class="flex justify-between"><span>Mobile Optimization:</span><span class="font-semibold text-blue-600">Good</span></div>
+                    </div>
+                `;
+        } else if (score >= 70) {
+          breakdownText = `
+                    <div class="space-y-2">
+                        <div class="flex justify-between"><span>Clarity & Readability:</span><span class="font-semibold text-yellow-600">Average</span></div>
+                        <div class="flex justify-between"><span>Engagement Factor:</span><span class="font-semibold text-yellow-600">Needs Work</span></div>
+                        <div class="flex justify-between"><span>Industry Relevance:</span><span class="font-semibold text-yellow-600">Fair</span></div>
+                        <div class="flex justify-between"><span>Mobile Optimization:</span><span class="font-semibold text-yellow-600">Could Improve</span></div>
+                    </div>
+                `;
+        } else {
+          breakdownText = `
+                    <div class="space-y-2">
+                        <div class="flex justify-between"><span>Clarity & Readability:</span><span class="font-semibold text-red-600">Needs Improvement</span></div>
+                        <div class="flex justify-between"><span>Engagement Factor:</span><span class="font-semibold text-red-600">Low</span></div>
+                        <div class="flex justify-between"><span>Industry Relevance:</span><span class="font-semibold text-red-600">Poor</span></div>
+                        <div class="flex justify-between"><span>Mobile Optimization:</span><span class="font-semibold text-red-600">Poor</span></div>
+                    </div>
+                `;
+        }
+
+        breakdown.innerHTML = breakdownText;
+      }
+
+      function displayError(errorMessage) {
+        // Create error display
+        const errorDiv = document.createElement("div");
+        errorDiv.className =
+          "bg-red-50 border border-red-200 rounded-lg p-4 mb-6";
+        errorDiv.innerHTML = `
+                <div class="flex items-center space-x-2 text-red-800">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                    </svg>
+                    <span class="font-medium">Error analyzing subject line</span>
+                </div>
+                <p class="mt-2 text-red-700">${errorMessage}</p>
+                <p class="mt-2 text-sm text-red-600">Please check that the backend server is running on port 3001.</p>
+            `;
+
+        // Insert error before results section
+        const resultsSection = document.getElementById("results");
+        resultsSection.parentNode.insertBefore(errorDiv, resultsSection);
+        resultsSection.classList.remove("hidden");
+      }
+
+      // Copy suggestion to clipboard
+      function copySuggestion(text, button, index) {
+        // Use the modern clipboard API if available
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard
+            .writeText(text)
+            .then(() => {
+              showCopySuccess(button);
+            })
+            .catch((err) => {
+              console.error("Failed to copy: ", err);
+              fallbackCopy(text, button);
+            });
+        } else {
+          // Fallback for older browsers or non-secure contexts
+          fallbackCopy(text, button);
+        }
+      }
+
+      // Fallback copy method for older browsers
+      function fallbackCopy(text, button) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+          const successful = document.execCommand("copy");
+          if (successful) {
+            showCopySuccess(button);
+          } else {
+            showCopyError(button);
+          }
+        } catch (err) {
+          console.error("Fallback copy failed: ", err);
+          showCopyError(button);
+        }
+
+        document.body.removeChild(textArea);
+      }
+
+      // Show copy success feedback
+      function showCopySuccess(button) {
+        const originalText = button.querySelector(".copy-text").textContent;
+        const originalBg = button.className;
+
+        // Update button appearance
+        button.querySelector(".copy-text").textContent = "Copied!";
+        button.className = button.className.replace(
+          "bg-green-600 hover:bg-green-700",
+          "bg-green-500"
+        );
+
+        // Reset after 2 seconds
+        setTimeout(() => {
+          button.querySelector(".copy-text").textContent = originalText;
+          button.className = originalBg;
+        }, 2000);
+      }
+
+      // Show copy error feedback
+      function showCopyError(button) {
+        const originalText = button.querySelector(".copy-text").textContent;
+        const originalBg = button.className;
+
+        // Update button appearance
+        button.querySelector(".copy-text").textContent = "Failed";
+        button.className = button.className.replace(
+          "bg-green-600 hover:bg-green-700",
+          "bg-red-500"
+        );
+
+        // Reset after 2 seconds
+        setTimeout(() => {
+          button.querySelector(".copy-text").textContent = originalText;
+          button.className = originalBg;
+        }, 2000);
+      }
+    </script>
+  </body>
+</html>
